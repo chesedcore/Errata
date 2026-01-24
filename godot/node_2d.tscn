@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3 uid="uid://c2vmhtsh34ke2"]
+
+[ext_resource type="Script" uid="uid://c6pc62431ym0y" path="res://node_2d.gd" id="1_0e48y"]
+[ext_resource type="Texture2D" uid="uid://chj7qrrlmsray" path="res://icon.svg" id="1_wtcfe"]
+
+[node name="Node2D" type="Node2D"]
+script = ExtResource("1_0e48y")
+
+[node name="Player" type="Player" parent="."]
+position = Vector2(556, 311)
+texture = ExtResource("1_wtcfe")
+
+[connection signal="speed_increased" from="Player" to="." method="_on_player_speed_increased"]
