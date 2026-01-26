@@ -8,16 +8,17 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct ErrataScriptInstance {
-    pub props: HashMap<StringName, Variant>,
+    pub properties: HashMap<StringName, Variant>,
     pub script_ref: Gd<Script>,
     pub owner: Gd<Object>,
 }
 
 impl ErrataScriptInstance {
     pub fn new(script: Gd<ErrataScript>, owner: Gd<Object>) -> Self {
+        godot_print!("Created true script instance for object {}", owner);
         let script_ref = script.clone().upcast::<Script>();
         Self {
-            props: HashMap::new(),
+            properties: HashMap::new(),
             script_ref,
             owner,
         }
@@ -32,14 +33,25 @@ impl ScriptInstance for ErrataScriptInstance {
     }
 
     fn set_property(mut this: SiMut<'_, Self>, name: StringName, value: &Variant) -> bool {
-        // godot_print!("Setting property: {} = {:?}", name, value);
-        this.props.insert(name, value.clone());
-        true
+        let _name_str = name.to_string();
+        
+        //check if it's a property the user declared in the script
+        //TODO: actually parse script and check declared properties
+        if this.properties.contains_key(&name) {
+            godot_print!("This property {} is owned by this script!", &name);
+            //it's one of ours, handle it
+            this.properties.insert(name, value.clone());
+            true
+        } else {
+            //not ours, so I let godot handle it
+            godot_print!("This property {} NOT is owned by this script...", &name);
+            false
+        }
     }
 
     fn get_property(&self, name: StringName) -> Option<Variant> {
         // godot_print!("Getting property: {}", name);
-        self.props.get(&name).cloned()
+        self.properties.get(&name).cloned()
     }
 
     fn get_property_list(&self) -> Vec<PropertyInfo> {
@@ -109,7 +121,7 @@ impl ScriptInstance for ErrataScriptInstance {
     fn get_property_type(&self, name: StringName) -> VariantType {
         // godot_print!("Getting property type for: {}", name);
         // TODO: parse the damned script and return actual property types
-        self.props.get(&name)
+        self.properties.get(&name)
             .map(|v| v.get_type())
             .unwrap_or(VariantType::NIL)
     }
@@ -120,7 +132,7 @@ impl ScriptInstance for ErrataScriptInstance {
 
     fn get_property_state(&self) -> Vec<(StringName, Variant)> {
         // godot_print!("Getting property state");
-        self.props.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
+        self.properties.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
     }
 
     fn get_language(&self) -> Gd<ScriptLanguage> {

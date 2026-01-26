@@ -15,6 +15,7 @@ pub struct ErrataScriptInstancePlaceholder {
 
 impl ErrataScriptInstancePlaceholder {
     pub fn new(script: Gd<ErrataScript>) -> Self {
+        godot_print!("Created placeholder script {}", script);
         let script_ref = script.clone().upcast::<Script>();
         Self {
             props: HashMap::new(),
