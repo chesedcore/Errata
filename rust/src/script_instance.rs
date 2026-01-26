@@ -32,31 +32,31 @@ impl ScriptInstance for ErrataScriptInstance {
     }
 
     fn set_property(mut this: SiMut<'_, Self>, name: StringName, value: &Variant) -> bool {
-        godot_print!("Setting property: {} = {:?}", name, value);
+        // godot_print!("Setting property: {} = {:?}", name, value);
         this.props.insert(name, value.clone());
         true
     }
 
     fn get_property(&self, name: StringName) -> Option<Variant> {
-        godot_print!("Getting property: {}", name);
+        // godot_print!("Getting property: {}", name);
         self.props.get(&name).cloned()
     }
 
     fn get_property_list(&self) -> Vec<PropertyInfo> {
-        godot_print!("Getting property list");
+        // godot_print!("Getting property list");
         // I guess I want to return properties we've stored dynamically
         // later, I'll probs to parse the script and return declared properties lmao
         vec![]
     }
 
     fn get_method_list(&self) -> Vec<MethodInfo> {
-        godot_print!("Getting method list");
+        // godot_print!("Getting method list");
         // TODO: Parse script and return actual methods!!!!
         vec![]
     }
 
     fn call(mut _this: SiMut<'_, Self>, method: StringName, args: &[&Variant]) -> Result<Variant, godot::sys::GDExtensionCallErrorType> {
-        godot_print!("Calling method: {} with {} args", method, args.len());
+        // godot_print!("Calling method: {} with {} args", method, args.len());
         
         match method.to_string().as_str() {
             "_ready" => {
@@ -93,7 +93,7 @@ impl ScriptInstance for ErrataScriptInstance {
     }
 
     fn has_method(&self, method: StringName) -> bool {
-        godot_print!("Checking if has method: {}", method);
+        // godot_print!("Checking if has method: {}", method);
         // TODO: look through the script to see if that method exists
         // but for now, default to common godot callbacks
         matches!(
@@ -107,7 +107,7 @@ impl ScriptInstance for ErrataScriptInstance {
     }
 
     fn get_property_type(&self, name: StringName) -> VariantType {
-        godot_print!("Getting property type for: {}", name);
+        // godot_print!("Getting property type for: {}", name);
         // TODO: parse the damned script and return actual property types
         self.props.get(&name)
             .map(|v| v.get_type())
@@ -119,7 +119,7 @@ impl ScriptInstance for ErrataScriptInstance {
     }
 
     fn get_property_state(&self) -> Vec<(StringName, Variant)> {
-        godot_print!("Getting property state");
+        // godot_print!("Getting property state");
         self.props.iter().map(|(k, v)| (k.clone(), v.clone())).collect()
     }
 
@@ -128,26 +128,26 @@ impl ScriptInstance for ErrataScriptInstance {
     }
 
     fn on_refcount_decremented(&self) -> bool {
-        godot_print!("Refcount decremented");
+        // godot_print!("Refcount decremented");
         false
     }
 
     fn on_refcount_incremented(&self) {
-        godot_print!("Refcount incremented");
+        // godot_print!("Refcount incremented");
     }
 
     fn property_get_fallback(&self, name: StringName) -> Option<Variant> {
-        godot_print!("Property get fallback: {}", name);
+        // godot_print!("Property get fallback: {}", name);
         None
     }
 
     fn property_set_fallback(_this: SiMut<'_, Self>, name: StringName, _value: &Variant) -> bool {
-        godot_print!("Property set fallback: {}", name);
+        // godot_print!("Property set fallback: {}", name);
         false
     }
 
     fn get_method_argument_count(&self, method: StringName) -> Option<u32> {
-        godot_print!("Getting method argument count for: {}", method);
+        // godot_print!("Getting method argument count for: {}", method);
         // TODO: parse the damned script and return actual argument count
         match method.to_string().as_str() {
             "_ready" => Some(0),

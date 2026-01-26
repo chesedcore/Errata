@@ -12,7 +12,7 @@ use crate::script_instance::ErrataScriptInstance;
 struct MyExtension;
 
 thread_local! {
-    static ERRATA_LANG: Cell<MaybeUninit<Gd<Errata>>> =
+    static ERRATA_LANG: Cell<MaybeUninit<Gd<ScriptLanguage>>> =
         const { Cell::new(MaybeUninit::uninit()) };
     static ERRATA_LOADER: Cell<MaybeUninit<Gd<ErrataResourceLoader>>> =
         const { Cell::new(MaybeUninit::uninit()) };
@@ -28,7 +28,7 @@ unsafe impl ExtensionLibrary for MyExtension {
             
             Engine::singleton().register_script_language(&errata);
             Engine::singleton().register_singleton(&Errata::class_name().to_string_name(), &errata);
-            ERRATA_LANG.set(MaybeUninit::new(errata));
+            ERRATA_LANG.set(MaybeUninit::new(errata.upcast::<ScriptLanguage>()));
 
             //register loader and saver
             let loader = Gd::from_object(ErrataResourceLoader);
@@ -76,7 +76,7 @@ impl Errata {
     fn singleton() -> Gd<ScriptLanguage> {
         ERRATA_LANG.with(|cell| unsafe {
             let lang_ref = (*cell.as_ptr()).assume_init_ref();
-            lang_ref.clone().upcast()
+            lang_ref.clone()
         })
     }
 }
@@ -108,7 +108,7 @@ impl IScriptLanguageExtension for Errata {
     
     // script creation
     fn make_template(&self, template: GString, class_name: GString, base_class: GString) -> Option<Gd<Script>> {
-        godot_print!("MAKE_TEMPLATE CALLED! template={}, class={}, base={}", template, class_name, base_class);
+        // godot_print!("MAKE_TEMPLATE CALLED! template={}, class={}, base={}", template, class_name, base_class);
         
         let source = if template.is_empty() {
             GString::from("# Errata Script\n")
@@ -119,6 +119,7 @@ impl IScriptLanguageExtension for Errata {
         let script = Gd::from_init_fn(|base| ErrataScript {
             base,
             source_code: source,
+            language: Some(Errata::singleton()),
         });
         
         godot_print!("Template created successfully!");
@@ -146,6 +147,7 @@ impl IScriptLanguageExtension for Errata {
         Some(Gd::from_init_fn(|base| ErrataScript {
             base,
             source_code: GString::new(),
+            language: Some(Errata::singleton()),
         }).upcast())
     }
     
@@ -159,7 +161,7 @@ impl IScriptLanguageExtension for Errata {
     
     // code editing features
     fn validate(&self, script: GString, _: GString, _: bool, _: bool, _: bool, _: bool) -> Dictionary { 
-        godot_print!("VALIDATING: {}", script);
+        // godot_print!("VALIDATING: {}", script);
         let mut result = Dictionary::new();
         result.set("valid", true);
         result.set("errors", Array::<Dictionary>::new());
@@ -234,6 +236,7 @@ impl IScriptLanguageExtension for Errata {
 pub struct ErrataScript {
     base: Base<ScriptExtension>,
     source_code: GString,
+    language: Option<Gd<ScriptLanguage>>,
 }
 
 #[godot_api]
@@ -243,6 +246,7 @@ impl IScriptExtension for ErrataScript {
         Self {
             base,
             source_code: GString::new(),
+            language: Some(Errata::singleton()),
         }
     }
 
@@ -274,7 +278,7 @@ impl IScriptExtension for ErrataScript {
     fn is_abstract(&self) -> bool { false }
     
     fn get_language(&self) -> Option<Gd<ScriptLanguage>> {
-        Some(Errata::singleton())
+        self.language.clone()
     }
     
     fn has_script_signal(&self, _signal: StringName) -> bool { false }
@@ -294,7 +298,7 @@ impl IScriptExtension for ErrataScript {
     fn get_members(&self) -> Array<StringName> { Array::new() }
 
     fn is_placeholder_fallback_enabled(&self) -> bool {
-        godot_print!("Placeholder fallback triggered!");
+        // godot_print!("Placeholder fallback triggered!");
         true 
     }
     fn get_rpc_config(&self) -> Variant { Variant::nil() }
@@ -353,6 +357,7 @@ impl IResourceFormatLoader for ErrataResourceLoader {
         let mut script = Gd::from_init_fn(|base| ErrataScript {
             base,
             source_code: source,
+            language: Some(Errata::singleton()),
         });
         
         script.set_path(&path);

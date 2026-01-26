@@ -14,7 +14,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 [application]
 
-config/name="Corona"
+config/name="Errata"
 config/description="what the fuck am i doing"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
