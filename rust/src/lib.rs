@@ -1,11 +1,13 @@
 mod placeholder_instance;
+mod script_instance;
 
 use godot::{classes::{Engine, FileAccess, IResourceFormatLoader, IResourceFormatSaver, IScriptExtension, IScriptLanguageExtension, Resource, ResourceFormatLoader, ResourceFormatSaver, ResourceLoader, ResourceSaver, Script, ScriptExtension, ScriptLanguage, ScriptLanguageExtension}, obj::script::create_script_instance, prelude::*};
 use godot::classes::script_language::ScriptNameCasing;
 use godot::classes::native::ScriptLanguageExtensionProfilingInfo;
 use godot::classes::file_access::ModeFlags;
-use std::{cell::Cell, mem::MaybeUninit, ptr::null_mut};
+use std::{cell::Cell, mem::MaybeUninit};
 use crate::placeholder_instance::ErrataScriptInstancePlaceholder;
+use crate::script_instance::ErrataScriptInstance;
 
 struct MyExtension;
 
@@ -229,7 +231,7 @@ impl IScriptLanguageExtension for Errata {
 
 #[derive(GodotClass)]
 #[class(tool, no_init, base=ScriptExtension)]
-struct ErrataScript {
+pub struct ErrataScript {
     base: Base<ScriptExtension>,
     source_code: GString,
 }
@@ -298,11 +300,14 @@ impl IScriptExtension for ErrataScript {
     fn get_rpc_config(&self) -> Variant { Variant::nil() }
     
     //unsafe!
-    unsafe fn instance_create(&self, _for_object: Gd<Object>) -> *mut std::ffi::c_void {
-        null_mut()
+    unsafe fn instance_create(&self, for_object: Gd<Object>) -> *mut std::ffi::c_void {
+        godot_print!("Creating ErrataScriptInstance for object: {:?}", for_object);
+        let instance = ErrataScriptInstance::new(self.to_gd(), for_object.clone());
+        create_script_instance(instance, for_object)
     }
 
     unsafe fn placeholder_instance_create(&self, for_object: Gd<godot::classes::Object>) -> *mut std::ffi::c_void {
+        godot_print!("Creating placeholder instance for object: {:?}", for_object);
         let placeholder = ErrataScriptInstancePlaceholder::new(self.to_gd());
         create_script_instance(placeholder, for_object)
     }
