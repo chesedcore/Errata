@@ -165,7 +165,8 @@ impl IScriptLanguageExtension for Corona {
         result
     }
 
-    fn validate_path(&self, path: GString) -> GString { path }
+    fn validate_path(&self, _path: GString) -> GString { GString::new() }
+    
     fn find_function(&self, _: GString, _: GString) -> i32 { -1 }
     fn make_function(&self, _: GString, _: GString, _: PackedStringArray) -> GString { GString::new() }
 
