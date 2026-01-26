@@ -4,7 +4,7 @@ use godot::{classes::{Engine, FileAccess, IResourceFormatLoader, IResourceFormat
 use godot::classes::script_language::ScriptNameCasing;
 use godot::classes::native::ScriptLanguageExtensionProfilingInfo;
 use godot::classes::file_access::ModeFlags;
-use std::{cell::Cell, mem::MaybeUninit};
+use std::{cell::Cell, mem::MaybeUninit, ptr::null_mut};
 use crate::placeholder_instance::CoronaScriptInstancePlaceholder;
 
 struct MyExtension;
@@ -105,17 +105,39 @@ impl IScriptLanguageExtension for Corona {
     fn get_string_delimiters(&self) -> PackedStringArray { PackedStringArray::new() }
     
     // script creation
-    fn make_template(&self, _template: GString, _class_name: GString, _base_class: GString) -> Option<Gd<Script>> {
+    fn make_template(&self, template: GString, class_name: GString, base_class: GString) -> Option<Gd<Script>> {
+        godot_print!("MAKE_TEMPLATE CALLED! template={}, class={}, base={}", template, class_name, base_class);
+        
+        let source = if template.is_empty() {
+            GString::from("# Corona Script\n")
+        } else {
+            template
+        };
+        
         let script = Gd::from_init_fn(|base| CoronaScript {
             base,
-            source_code: GString::from("# Corona Script\n"),
+            source_code: source,
         });
         
+        godot_print!("Template created successfully!");
         Some(script.upcast())
     }
 
 
-    fn get_built_in_templates(&self, _: StringName) -> Array<Dictionary> { Array::new() }
+    fn get_built_in_templates(&self, object: StringName) -> Array<Dictionary> {
+        match object.to_string().as_str() {
+            "Node" => array![&dict! {
+                "inherit": StringName::from("Node"),
+                "name": "Empty",
+                "description": "An empty Corona script.",
+                "content": "# Corona Script\nfunc _ready():\n\tpass\n",
+                "id": 1,
+                "origin": "builtin",
+            }],
+            _ => Array::new(),
+        }
+    }
+
     fn is_using_templates(&mut self) -> bool { true }
 
     fn create_script(&self) -> Option<Gd<Object>> {
@@ -276,7 +298,7 @@ impl IScriptExtension for CoronaScript {
     
     //unsafe!
     unsafe fn instance_create(&self, _for_object: Gd<Object>) -> *mut std::ffi::c_void {
-        std::ptr::null_mut()
+        null_mut()
     }
 
     unsafe fn placeholder_instance_create(&self, for_object: Gd<godot::classes::Object>) -> *mut std::ffi::c_void {
@@ -347,11 +369,13 @@ impl IResourceFormatSaver for CoronaResourceSaver {
     }
 
     fn recognize(&self, resource: Option<Gd<Resource>>) -> bool {
-        let resource = match resource {
-            Some(thing) => thing,
-            None => {return false;}
-        };
-        resource.is_class("Script")
+        resource
+            .map(|res| res.try_cast::<CoronaScript>().is_ok())
+            .unwrap_or(false)
+    }
+
+    fn recognize_path(&self, _res: Option<Gd<Resource>>, _path: GString) -> bool {
+        true
     }
 
     fn save(&mut self, resource: Option<Gd<Resource>>, path: GString, flags: u32) -> godot::global::Error {
