@@ -8,3 +8,7 @@ crate-type = ["cdylib"] # Compile this crate to a dynamic C library.
 
 [dependencies]
 godot = { version = "0.2.4", features = ["experimental-threads"] }
+lalrpop-util = { version = "0.22.2", features = ["lexer"] }
+
+[build-dependencies]
+lalrpop = "0.22.2"

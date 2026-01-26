@@ -1,13 +1,18 @@
 mod placeholder_instance;
 mod script_instance;
+mod errata_prelude;
 
 use godot::{classes::{Engine, FileAccess, IResourceFormatLoader, IResourceFormatSaver, IScriptExtension, IScriptLanguageExtension, Resource, ResourceFormatLoader, ResourceFormatSaver, ResourceLoader, ResourceSaver, Script, ScriptExtension, ScriptLanguage, ScriptLanguageExtension}, obj::script::create_script_instance, prelude::*};
 use godot::classes::script_language::ScriptNameCasing;
 use godot::classes::native::ScriptLanguageExtensionProfilingInfo;
 use godot::classes::file_access::ModeFlags;
+use lalrpop_util::lalrpop_mod;
 use std::{cell::Cell, mem::MaybeUninit};
 use crate::placeholder_instance::ErrataScriptInstancePlaceholder;
 use crate::script_instance::ErrataScriptInstance;
+use crate::errata_prelude::ast::Statement;
+
+lalrpop_mod!(pub errata);
 
 struct MyExtension;
 
@@ -120,6 +125,7 @@ impl IScriptLanguageExtension for Errata {
             base,
             source_code: source,
             language: Some(Errata::singleton()),
+            ast: None,
         });
         
         godot_print!("Template created successfully!");
@@ -148,6 +154,7 @@ impl IScriptLanguageExtension for Errata {
             base,
             source_code: GString::new(),
             language: Some(Errata::singleton()),
+            ast: None,
         }).upcast())
     }
     
@@ -237,6 +244,7 @@ pub struct ErrataScript {
     base: Base<ScriptExtension>,
     source_code: GString,
     language: Option<Gd<ScriptLanguage>>,
+    ast: Option<Vec<Statement>>
 }
 
 #[godot_api]
@@ -247,6 +255,7 @@ impl IScriptExtension for ErrataScript {
             base,
             source_code: GString::new(),
             language: Some(Errata::singleton()),
+            ast: None,
         }
     }
 
@@ -261,9 +270,30 @@ impl IScriptExtension for ErrataScript {
     fn instance_has(&self, _object: Gd<Object>) -> bool { false }
     fn has_source_code(&self) -> bool { true }
     fn get_source_code(&self) -> GString { self.source_code.clone() }
-    fn set_source_code(&mut self, code: GString) { 
-        self.source_code = code;
+
+    //parse the ast immediately on script source set
+    fn set_source_code(&mut self, code: GString) {
+
+        self.source_code = code.clone();
+
+        let script_parser = errata::ScriptParser::new();
+        match script_parser.parse(&code.to_string()) {
+
+            Ok(ast) => { 
+                godot_print!("Parsed successfully! AST: {:?}", ast);
+                self.ast = Some(ast);
+            },
+
+            Err(e) => {
+                godot_script_error!("Parse error: {:?}", e);
+                godot_error!("Parser error: {:?}", e);
+                self.ast = None;
+            }
+
+        }
+    
     }
+
     fn reload(&mut self, _keep_state: bool) -> godot::global::Error {
         godot::global::Error::OK
     }
@@ -358,6 +388,7 @@ impl IResourceFormatLoader for ErrataResourceLoader {
             base,
             source_code: source,
             language: Some(Errata::singleton()),
+            ast: None,
         });
         
         script.set_path(&path);

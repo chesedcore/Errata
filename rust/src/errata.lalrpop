@@ -1,0 +1,43 @@
+use std::str::FromStr;
+use crate::errata_prelude::ast::{Statement, Literal};
+
+grammar;
+
+//starting point - a full script file
+pub Script: Vec<Statement> = {
+    <Statement*>
+};
+
+//statements are the top-level things in your script
+pub Statement: Statement = {
+    VarDecl,
+    FuncDecl,
+};
+
+//variable declarations: var x = 3
+VarDecl: Statement = {
+    "var" <name:Ident> "=" <value:Literal> => {
+        Statement::VarDecl { name, value }
+    }
+};
+
+//function declarations: func foo() { }
+FuncDecl: Statement = {
+    "func" <name:Ident> "(" ")" "{" <body:Statement*> "}" => {
+        Statement::FuncDecl { name, params: vec![], body }
+    }
+};
+
+//literals - just integers and strings for now
+Literal: Literal = {
+    <n:Num> => Literal::Int(n),
+    <s:Str> => Literal::String(s),
+};
+
+//lexer tokens
+Ident: String = r"[a-zA-Z_][a-zA-Z0-9_]*" => <>.to_string();
+Num: i64 = r"[0-9]+" => i64::from_str(<>).unwrap();
+Str: String = r#""[^"]*""# => {
+    let s = <>;
+    s[1..s.len()-1].to_string() //strip quotes
+};

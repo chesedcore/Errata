@@ -1,3 +1,5 @@
-# Errata Script
-func _ready():
-	pass
+var health = 100
+var name = "player"
+
+func _ready() {
+}
