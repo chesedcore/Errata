@@ -68,34 +68,32 @@ impl ScriptInstance for ErrataScriptInstance {
     }
 
     fn call(mut _this: SiMut<'_, Self>, method: StringName, args: &[&Variant]) -> Result<Variant, godot::sys::GDExtensionCallErrorType> {
-        // godot_print!("Calling method: {} with {} args", method, args.len());
-        
         match method.to_string().as_str() {
             "_ready" => {
                 godot_print!("_ready() called on Errata script!");
-                // TODO: exec the actual _ready function from the script lol
+                //TODO: exec the actual _ready function from the script lol
                 Ok(Variant::nil())
             }
             "_process" => {
-                // TODO: exec _process(delta)
+                //TODO: exec _process(delta)
                 Ok(Variant::nil())
             }
             "_physics_process" => {
-                // TODO: exec _physics_process(delta)
+                //TODO: exec _physics_process(delta)
                 Ok(Variant::nil())
             }
             "_input" => {
-                // TODO: exec _input(event)
+                //TODO: exec _input(event)
                 Ok(Variant::nil())
             }
             "_unhandled_input" => {
-                // TODO: exec _unhandled_input(event)
+                //TODO: exec _unhandled_input(event)
                 Ok(Variant::nil())
             }
             _ => {
-                godot_print!("Unknown method called: {}", method);
-                // TODO: lookup random ahh method then call it
-                Ok(Variant::nil())
+                //we don't have this method, tell godot to use the base object's implementation
+                godot_print!("Unknown method {} called!", &method);
+                Err(godot::sys::GDEXTENSION_CALL_ERROR_INVALID_METHOD)
             }
         }
     }
