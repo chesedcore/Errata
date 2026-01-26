@@ -3,18 +3,18 @@ use godot::classes::{Script, ScriptLanguage};
 use godot::meta::PropertyInfo;
 use godot::obj::script::{ScriptInstance, SiMut} ;
 
-use crate::CoronaScript;
+use crate::ErrataScript;
 use std::collections::HashMap;
 
 
 #[derive(Debug)]
-pub struct CoronaScriptInstancePlaceholder {
+pub struct ErrataScriptInstancePlaceholder {
     pub props: HashMap<StringName, Variant>,
     pub script_ref: Gd<Script>,
 }
 
-impl CoronaScriptInstancePlaceholder {
-    pub fn new(script: Gd<CoronaScript>) -> Self {
+impl ErrataScriptInstancePlaceholder {
+    pub fn new(script: Gd<ErrataScript>) -> Self {
         let script_ref = script.clone().upcast::<Script>();
         Self {
             props: HashMap::new(),
@@ -23,7 +23,7 @@ impl CoronaScriptInstancePlaceholder {
     }
 }
 
-impl ScriptInstance for CoronaScriptInstancePlaceholder {
+impl ScriptInstance for ErrataScriptInstancePlaceholder {
     type Base = Object;
 
     fn class_name(&self) -> GString {
@@ -76,7 +76,7 @@ impl ScriptInstance for CoronaScriptInstancePlaceholder {
     }
 
     fn get_language(&self) -> Gd<ScriptLanguage> {
-        crate::Corona::singleton().clone()
+        crate::Errata::singleton().clone()
     }
 
     fn on_refcount_decremented(&self) -> bool { false }

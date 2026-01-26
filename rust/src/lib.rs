@@ -5,16 +5,16 @@ use godot::classes::script_language::ScriptNameCasing;
 use godot::classes::native::ScriptLanguageExtensionProfilingInfo;
 use godot::classes::file_access::ModeFlags;
 use std::{cell::Cell, mem::MaybeUninit, ptr::null_mut};
-use crate::placeholder_instance::CoronaScriptInstancePlaceholder;
+use crate::placeholder_instance::ErrataScriptInstancePlaceholder;
 
 struct MyExtension;
 
 thread_local! {
-    static CORONA_LANG: Cell<MaybeUninit<Gd<Corona>>> =
+    static ERRATA_LANG: Cell<MaybeUninit<Gd<Errata>>> =
         const { Cell::new(MaybeUninit::uninit()) };
-    static CORONA_LOADER: Cell<MaybeUninit<Gd<CoronaResourceLoader>>> =
+    static ERRATA_LOADER: Cell<MaybeUninit<Gd<ErrataResourceLoader>>> =
         const { Cell::new(MaybeUninit::uninit()) };
-    static CORONA_SAVER: Cell<MaybeUninit<Gd<CoronaResourceSaver>>> =
+    static ERRATA_SAVER: Cell<MaybeUninit<Gd<ErrataResourceSaver>>> =
         const { Cell::new(MaybeUninit::uninit()) };
 }
 
@@ -22,40 +22,40 @@ thread_local! {
 unsafe impl ExtensionLibrary for MyExtension {
     fn on_level_init(level: InitLevel) {
         if level == InitLevel::Scene {
-            let corona = Corona::new_alloc();
+            let errata = Errata::new_alloc();
             
-            Engine::singleton().register_script_language(&corona);
-            Engine::singleton().register_singleton(&Corona::class_name().to_string_name(), &corona);
-            CORONA_LANG.set(MaybeUninit::new(corona));
+            Engine::singleton().register_script_language(&errata);
+            Engine::singleton().register_singleton(&Errata::class_name().to_string_name(), &errata);
+            ERRATA_LANG.set(MaybeUninit::new(errata));
 
             //register loader and saver
-            let loader = Gd::from_object(CoronaResourceLoader);
+            let loader = Gd::from_object(ErrataResourceLoader);
             ResourceLoader::singleton().add_resource_format_loader(&loader);
-            CORONA_LOADER.set(MaybeUninit::new(loader));
+            ERRATA_LOADER.set(MaybeUninit::new(loader));
 
-            let saver = Gd::from_object(CoronaResourceSaver);
+            let saver = Gd::from_object(ErrataResourceSaver);
             ResourceSaver::singleton().add_resource_format_saver(&saver);
-            CORONA_SAVER.set(MaybeUninit::new(saver));
+            ERRATA_SAVER.set(MaybeUninit::new(saver));
         }
     }
 
     fn on_level_deinit(level: InitLevel) {
         if level == InitLevel::Scene {
-            CORONA_LANG.with(|cell| {
+            ERRATA_LANG.with(|cell| {
                 let lang = cell.replace(MaybeUninit::uninit());
                 let lang = unsafe { lang.assume_init() };
                 Engine::singleton().unregister_script_language(&lang);
-                Engine::singleton().unregister_singleton(&Corona::class_name().to_string_name());
+                Engine::singleton().unregister_singleton(&Errata::class_name().to_string_name());
                 lang.free();
             });
 
-            CORONA_LOADER.with(|cell| {
+            ERRATA_LOADER.with(|cell| {
                 let loader = cell.replace(MaybeUninit::uninit());
                 let loader = unsafe { loader.assume_init() };
                 ResourceLoader::singleton().remove_resource_format_loader(&loader);
             });
 
-            CORONA_SAVER.with(|cell| {
+            ERRATA_SAVER.with(|cell| {
                 let saver = cell.replace(MaybeUninit::uninit());
                 let saver = unsafe { saver.assume_init() };
                 ResourceSaver::singleton().remove_resource_format_saver(&saver);
@@ -66,13 +66,13 @@ unsafe impl ExtensionLibrary for MyExtension {
 
 #[derive(GodotClass)]
 #[class(tool, init, base=ScriptLanguageExtension)]
-struct Corona {
+struct Errata {
     base: Base<ScriptLanguageExtension>,
 }
 
-impl Corona {
+impl Errata {
     fn singleton() -> Gd<ScriptLanguage> {
-        CORONA_LANG.with(|cell| unsafe {
+        ERRATA_LANG.with(|cell| unsafe {
             let lang_ref = (*cell.as_ptr()).assume_init_ref();
             lang_ref.clone().upcast()
         })
@@ -80,19 +80,19 @@ impl Corona {
 }
 
 #[godot_api]
-impl IScriptLanguageExtension for Corona {
-    fn get_name(&self) -> GString { "Corona".into() }
-    fn get_type(&self) -> GString { "Corona".into() }
+impl IScriptLanguageExtension for Errata {
+    fn get_name(&self) -> GString { "Errata".into() }
+    fn get_type(&self) -> GString { "Errata".into() }
 
     fn init_ext(&mut self) {}
     
     //so from what I see, this wants the file extension of your scripting language. without the dot.
     //like gdscript is ".gd", but without the dot.
-    fn get_extension(&self) -> GString { "crn".into() }
+    fn get_extension(&self) -> GString { "err".into() }
 
     //see `get_extension`
     fn get_recognized_extensions(&self) -> PackedStringArray {
-        PackedStringArray::from(&[GString::from("crn")])
+        PackedStringArray::from(&[GString::from("err")])
     }
     
     fn finish(&mut self) {}
@@ -109,12 +109,12 @@ impl IScriptLanguageExtension for Corona {
         godot_print!("MAKE_TEMPLATE CALLED! template={}, class={}, base={}", template, class_name, base_class);
         
         let source = if template.is_empty() {
-            GString::from("# Corona Script\n")
+            GString::from("# Errata Script\n")
         } else {
             template
         };
         
-        let script = Gd::from_init_fn(|base| CoronaScript {
+        let script = Gd::from_init_fn(|base| ErrataScript {
             base,
             source_code: source,
         });
@@ -129,8 +129,8 @@ impl IScriptLanguageExtension for Corona {
             "Node" => array![&dict! {
                 "inherit": StringName::from("Node"),
                 "name": "Empty",
-                "description": "An empty Corona script.",
-                "content": "# Corona Script\nfunc _ready():\n\tpass\n",
+                "description": "An empty Errata script.",
+                "content": "# Errata Script\nfunc _ready():\n\tpass\n",
                 "id": 1,
                 "origin": "builtin",
             }],
@@ -141,7 +141,7 @@ impl IScriptLanguageExtension for Corona {
     fn is_using_templates(&mut self) -> bool { true }
 
     fn create_script(&self) -> Option<Gd<Object>> {
-        Some(Gd::from_init_fn(|base| CoronaScript {
+        Some(Gd::from_init_fn(|base| ErrataScript {
             base,
             source_code: GString::new(),
         }).upcast())
@@ -166,7 +166,7 @@ impl IScriptLanguageExtension for Corona {
     }
 
     fn validate_path(&self, _path: GString) -> GString { GString::new() }
-    
+
     fn find_function(&self, _: GString, _: GString) -> i32 { -1 }
     fn make_function(&self, _: GString, _: GString, _: PackedStringArray) -> GString { GString::new() }
 
@@ -229,13 +229,13 @@ impl IScriptLanguageExtension for Corona {
 
 #[derive(GodotClass)]
 #[class(tool, no_init, base=ScriptExtension)]
-struct CoronaScript {
+struct ErrataScript {
     base: Base<ScriptExtension>,
     source_code: GString,
 }
 
 #[godot_api]
-impl IScriptExtension for CoronaScript {
+impl IScriptExtension for ErrataScript {
 
     fn init(base: Base<ScriptExtension>) -> Self {
         Self {
@@ -272,7 +272,7 @@ impl IScriptExtension for CoronaScript {
     fn is_abstract(&self) -> bool { false }
     
     fn get_language(&self) -> Option<Gd<ScriptLanguage>> {
-        Some(Corona::singleton())
+        Some(Errata::singleton())
     }
     
     fn has_script_signal(&self, _signal: StringName) -> bool { false }
@@ -303,31 +303,31 @@ impl IScriptExtension for CoronaScript {
     }
 
     unsafe fn placeholder_instance_create(&self, for_object: Gd<godot::classes::Object>) -> *mut std::ffi::c_void {
-        let placeholder = CoronaScriptInstancePlaceholder::new(self.to_gd());
+        let placeholder = ErrataScriptInstancePlaceholder::new(self.to_gd());
         create_script_instance(placeholder, for_object)
     }
 }
 
 #[derive(GodotClass)]
 #[class(tool, base=ResourceFormatLoader)]
-struct CoronaResourceLoader;
+struct ErrataResourceLoader;
 
 #[godot_api]
-impl IResourceFormatLoader for CoronaResourceLoader {
+impl IResourceFormatLoader for ErrataResourceLoader {
     fn init(_base: Base<ResourceFormatLoader>) -> Self {
         Self
     }
 
     fn get_recognized_extensions(&self) -> PackedStringArray {
-        PackedStringArray::from(&[GString::from("crn")])
+        PackedStringArray::from(&[GString::from("err")])
     }
 
     fn handles_type(&self, type_name: StringName) -> bool {
-        type_name == StringName::from("Script") || type_name == StringName::from("CoronaScript")
+        type_name == StringName::from("Script") || type_name == StringName::from("ErrataScript")
     }
 
     fn get_resource_type(&self, path: GString) -> GString {
-        if path.to_string().ends_with(".crn") {
+        if path.to_string().ends_with(".err") {
             GString::from("Script")
         } else {
             GString::new()
@@ -345,7 +345,7 @@ impl IResourceFormatLoader for CoronaResourceLoader {
         
         let source = file.get_as_text();
         
-        let mut script = Gd::from_init_fn(|base| CoronaScript {
+        let mut script = Gd::from_init_fn(|base| ErrataScript {
             base,
             source_code: source,
         });
@@ -357,21 +357,21 @@ impl IResourceFormatLoader for CoronaResourceLoader {
 
 #[derive(GodotClass)]
 #[class(tool, base=ResourceFormatSaver)]
-struct CoronaResourceSaver;
+struct ErrataResourceSaver;
 
 #[godot_api]
-impl IResourceFormatSaver for CoronaResourceSaver {
+impl IResourceFormatSaver for ErrataResourceSaver {
     fn init(_base: Base<ResourceFormatSaver>) -> Self {
         Self
     }
 
     fn get_recognized_extensions(&self, _resource: Option<Gd<Resource>>) -> PackedStringArray {
-        PackedStringArray::from(&[GString::from("crn")])
+        PackedStringArray::from(&[GString::from("err")])
     }
 
     fn recognize(&self, resource: Option<Gd<Resource>>) -> bool {
         resource
-            .map(|res| res.try_cast::<CoronaScript>().is_ok())
+            .map(|res| res.try_cast::<ErrataScript>().is_ok())
             .unwrap_or(false)
     }
 
