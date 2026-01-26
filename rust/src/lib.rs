@@ -1,8 +1,11 @@
-use godot::{classes::{Engine, IScriptExtension, IScriptLanguageExtension, Script, ScriptExtension, ScriptLanguage, ScriptLanguageExtension, ResourceFormatLoader, IResourceFormatLoader, ResourceFormatSaver, IResourceFormatSaver, Resource, ResourceLoader, ResourceSaver, FileAccess}, prelude::*};
+mod placeholder_instance;
+
+use godot::{classes::{Engine, FileAccess, IResourceFormatLoader, IResourceFormatSaver, IScriptExtension, IScriptLanguageExtension, Resource, ResourceFormatLoader, ResourceFormatSaver, ResourceLoader, ResourceSaver, Script, ScriptExtension, ScriptLanguage, ScriptLanguageExtension}, obj::script::create_script_instance, prelude::*};
 use godot::classes::script_language::ScriptNameCasing;
 use godot::classes::native::ScriptLanguageExtensionProfilingInfo;
 use godot::classes::file_access::ModeFlags;
 use std::{cell::Cell, mem::MaybeUninit};
+use crate::placeholder_instance::CoronaScriptInstancePlaceholder;
 
 struct MyExtension;
 
@@ -265,7 +268,10 @@ impl IScriptExtension for CoronaScript {
     fn get_constants(&self) -> Dictionary { Dictionary::new() }
     fn get_members(&self) -> Array<StringName> { Array::new() }
 
-    fn is_placeholder_fallback_enabled(&self) -> bool { false }
+    fn is_placeholder_fallback_enabled(&self) -> bool {
+        godot_print!("Placeholder fallback triggered!");
+        true 
+    }
     fn get_rpc_config(&self) -> Variant { Variant::nil() }
     
     //unsafe!
@@ -273,8 +279,9 @@ impl IScriptExtension for CoronaScript {
         std::ptr::null_mut()
     }
 
-    unsafe fn placeholder_instance_create(&self, _for_object: Gd<Object>) -> *mut std::ffi::c_void {
-        std::ptr::null_mut()
+    unsafe fn placeholder_instance_create(&self, for_object: Gd<godot::classes::Object>) -> *mut std::ffi::c_void {
+        let placeholder = CoronaScriptInstancePlaceholder::new(self.to_gd());
+        create_script_instance(placeholder, for_object)
     }
 }
 
