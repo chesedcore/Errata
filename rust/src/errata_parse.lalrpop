@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::errata_prelude::ast::{Statement, Literal, Parameter};
+use crate::errata_prelude::ast::{Statement, Expression, BinaryOperator, Parameter};
 
 grammar;
 
@@ -12,27 +12,31 @@ pub Script: Vec<Statement> = {
 pub Statement: Statement = {
     VarDecl,
     FuncDecl,
+    Return,
 };
 
-//variable declarations: var x = 3
+//variable declarations
+//var x = 3
+//var x: int = 3
+//var name: String = "bob"
 VarDecl: Statement = {
-    "var" <name:Ident> "=" <value:Literal> => {
+    "var" <name:Ident> <type_annotation:(":" <Ident>)?> "=" <value:Expression> => {
         let is_private = name.starts_with('_');
-        Statement::VarDecl { name, value, is_private }
+        Statement::VarDecl { name, type_annotation, value, is_private }
     }
 };
 
-//function declarations with typed parameters
-//supports: func foo() { }
-//supports: func foo(x: int) { }
-//supports: func foo(mut player: Player, amount: int) { }
-//supports: mut func increment() { }
+//function declarations with return types
+//func foo() { }
+//func add(a: int, b: int) -> int { }
+//mut func increment() -> int { }
 FuncDecl: Statement = {
-    <is_mut:"mut"?> "func" <name:Ident> "(" <params:Comma<Param>> ")" "{" <body:Statement*> "}" => {
+    <is_mut:"mut"?> "func" <name:Ident> "(" <params:Comma<Param>> ")" <return_type:("->" <Ident>)?> "{" <body:Statement*> "}" => {
         let is_private = name.starts_with('_');
         Statement::FuncDecl { 
             name, 
-            params, 
+            params,
+            return_type,
             body, 
             is_private,
             is_mut: is_mut.is_some(),
@@ -40,9 +44,16 @@ FuncDecl: Statement = {
     }
 };
 
+//return statement
+//return
+//return x + 1
+Return: Statement = {
+    "return" <value:Expression?> => Statement::Return { value }
+};
+
 //single parameter definition
-//supports: x: int
-//supports: mut player: Player
+//x: int
+//mut player: Player
 Param: Parameter = {
     <is_mut:"mut"?> <name:Ident> ":" <type_annotation:Ident> => {
         Parameter {
@@ -54,7 +65,6 @@ Param: Parameter = {
 };
 
 //comma-separated list macro
-//handles: empty, single item, or multiple items
 Comma<T>: Vec<T> = {
     <mut v:(<T> ",")*> <e:T?> => match e {
         None => v,
@@ -65,10 +75,105 @@ Comma<T>: Vec<T> = {
     }
 };
 
-//literals, just integers and strings for now
-Literal: Literal = {
-    <n:Num> => Literal::Int(n),
-    <s:Str> => Literal::String(s),
+//expressions with operator precedence
+//lowest precedence (evaluated last)
+pub Expression: Expression = {
+    LogicalOrExpr,
+};
+
+LogicalOrExpr: Expression = {
+    <left:LogicalOrExpr> "||" <right:LogicalAndExpr> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::Or,
+        right: Box::new(right),
+    },
+    LogicalAndExpr,
+};
+
+LogicalAndExpr: Expression = {
+    <left:LogicalAndExpr> "&&" <right:ComparisonExpr> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::And,
+        right: Box::new(right),
+    },
+    ComparisonExpr,
+};
+
+ComparisonExpr: Expression = {
+    <left:ComparisonExpr> "==" <right:AddSubExpr> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::Equals,
+        right: Box::new(right),
+    },
+    <left:ComparisonExpr> "!=" <right:AddSubExpr> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::NotEquals,
+        right: Box::new(right),
+    },
+    <left:ComparisonExpr> "<" <right:AddSubExpr> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::Less,
+        right: Box::new(right),
+    },
+    <left:ComparisonExpr> "<=" <right:AddSubExpr> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::LessEqual,
+        right: Box::new(right),
+    },
+    <left:ComparisonExpr> ">" <right:AddSubExpr> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::Greater,
+        right: Box::new(right),
+    },
+    <left:ComparisonExpr> ">=" <right:AddSubExpr> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::GreaterEqual,
+        right: Box::new(right),
+    },
+    AddSubExpr,
+};
+
+AddSubExpr: Expression = {
+    <left:AddSubExpr> "+" <right:MulDivExpr> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::Add,
+        right: Box::new(right),
+    },
+    <left:AddSubExpr> "-" <right:MulDivExpr> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::Subtract,
+        right: Box::new(right),
+    },
+    MulDivExpr,
+};
+
+MulDivExpr: Expression = {
+    <left:MulDivExpr> "*" <right:PrimaryExpr> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::Multiply,
+        right: Box::new(right),
+    },
+    <left:MulDivExpr> "/" <right:PrimaryExpr> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::Divide,
+        right: Box::new(right),
+    },
+    PrimaryExpr,
+};
+
+PrimaryExpr: Expression = {
+    //literals
+    <n:Num> => Expression::IntLiteral(n),
+    <s:Str> => Expression::StringLiteral(s),
+    
+    //function call: foo(a, b, c)
+    <name:Ident> "(" <args:Comma<Expression>> ")" => Expression::FunctionCall { name, args },
+    
+    //variable reference
+    <name:Ident> => Expression::Variable(name),
+    
+    //parenthesised expression for grouping
+    "(" <Expression> ")",
 };
 
 //lexer tokens
