@@ -9,10 +9,18 @@ pub enum Statement {
 
     FuncDecl { 
         name: String, 
-        params: Vec<String>, 
+        params: Vec<Parameter>, 
         body: Vec<Statement>,
         is_private: bool,
+        is_mut: bool,
     },
+}
+
+#[derive(Debug, Clone)]
+pub struct Parameter {
+    pub name: String,
+    pub type_annotation: String,
+    pub is_mut: bool,
 }
 
 #[derive(Debug, Clone)]

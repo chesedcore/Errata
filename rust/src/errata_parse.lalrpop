@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::errata_prelude::ast::{Statement, Literal};
+use crate::errata_prelude::ast::{Statement, Literal, Parameter};
 
 grammar;
 
@@ -22,11 +22,46 @@ VarDecl: Statement = {
     }
 };
 
-//function declarations: func foo() { }
+//function declarations with typed parameters
+//supports: func foo() { }
+//supports: func foo(x: int) { }
+//supports: func foo(mut player: Player, amount: int) { }
+//supports: mut func increment() { }
 FuncDecl: Statement = {
-    "func" <name:Ident> "(" ")" "{" <body:Statement*> "}" => {
+    <is_mut:"mut"?> "func" <name:Ident> "(" <params:Comma<Param>> ")" "{" <body:Statement*> "}" => {
         let is_private = name.starts_with('_');
-        Statement::FuncDecl { name, params: vec![], body, is_private }
+        Statement::FuncDecl { 
+            name, 
+            params, 
+            body, 
+            is_private,
+            is_mut: is_mut.is_some(),
+        }
+    }
+};
+
+//single parameter definition
+//supports: x: int
+//supports: mut player: Player
+Param: Parameter = {
+    <is_mut:"mut"?> <name:Ident> ":" <type_annotation:Ident> => {
+        Parameter {
+            name,
+            type_annotation,
+            is_mut: is_mut.is_some(),
+        }
+    }
+};
+
+//comma-separated list macro
+//handles: empty, single item, or multiple items
+Comma<T>: Vec<T> = {
+    <mut v:(<T> ",")*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            v.push(e);
+            v
+        }
     }
 };
 
