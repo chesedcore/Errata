@@ -1,7 +1,18 @@
 #[derive(Debug, Clone)]
 pub enum Statement {
-    VarDecl { name: String, value: Literal },
-    FuncDecl { name: String, params: Vec<String>, body: Vec<Statement> },
+
+    VarDecl {
+        name: String, 
+        value: Literal,
+        is_private: bool,
+    },
+
+    FuncDecl { 
+        name: String, 
+        params: Vec<String>, 
+        body: Vec<Statement>,
+        is_private: bool,
+    },
 }
 
 #[derive(Debug, Clone)]

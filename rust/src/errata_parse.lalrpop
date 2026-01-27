@@ -8,7 +8,7 @@ pub Script: Vec<Statement> = {
     <Statement*>
 };
 
-//statements are the top-level things in your script
+//statements are the top-level things in the script
 pub Statement: Statement = {
     VarDecl,
     FuncDecl,
@@ -17,18 +17,20 @@ pub Statement: Statement = {
 //variable declarations: var x = 3
 VarDecl: Statement = {
     "var" <name:Ident> "=" <value:Literal> => {
-        Statement::VarDecl { name, value }
+        let is_private = name.starts_with('_');
+        Statement::VarDecl { name, value, is_private }
     }
 };
 
 //function declarations: func foo() { }
 FuncDecl: Statement = {
     "func" <name:Ident> "(" ")" "{" <body:Statement*> "}" => {
-        Statement::FuncDecl { name, params: vec![], body }
+        let is_private = name.starts_with('_');
+        Statement::FuncDecl { name, params: vec![], body, is_private }
     }
 };
 
-//literals - just integers and strings for now
+//literals, just integers and strings for now
 Literal: Literal = {
     <n:Num> => Literal::Int(n),
     <s:Str> => Literal::String(s),

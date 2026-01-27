@@ -1,5 +1,8 @@
-var health = 100
+var _health = 100
 var name = "player"
 
 func _ready() {
+	var x = 7
+	var balls = 9
+	var sex = 0
 }

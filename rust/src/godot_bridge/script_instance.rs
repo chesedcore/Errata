@@ -67,7 +67,7 @@ impl ScriptInstance for ErrataScriptInstance {
         vec![]
     }
 
-    fn call(mut _this: SiMut<'_, Self>, method: StringName, args: &[&Variant]) -> Result<Variant, godot::sys::GDExtensionCallErrorType> {
+    fn call(mut _this: SiMut<'_, Self>, method: StringName, _args: &[&Variant]) -> Result<Variant, godot::sys::GDExtensionCallErrorType> {
         match method.to_string().as_str() {
             "_ready" => {
                 godot_print!("_ready() called on Errata script!");
@@ -146,12 +146,12 @@ impl ScriptInstance for ErrataScriptInstance {
         // godot_print!("Refcount incremented");
     }
 
-    fn property_get_fallback(&self, name: StringName) -> Option<Variant> {
+    fn property_get_fallback(&self, _name: StringName) -> Option<Variant> {
         // godot_print!("Property get fallback: {}", name);
         None
     }
 
-    fn property_set_fallback(_this: SiMut<'_, Self>, name: StringName, _value: &Variant) -> bool {
+    fn property_set_fallback(_this: SiMut<'_, Self>, _name: StringName, _value: &Variant) -> bool {
         // godot_print!("Property set fallback: {}", name);
         false
     }
