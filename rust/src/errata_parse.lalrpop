@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use crate::errata_prelude::ast::{Statement, Expression, BinaryOperator, Parameter};
+use crate::errata_prelude::ast::{Statement, Expression, BinaryOperator, AssignmentOp, Parameter};
 
 grammar;
 
@@ -13,6 +13,7 @@ pub Statement: Statement = {
     VarDecl,
     FuncDecl,
     Return,
+    Assignment,
 };
 
 //variable declarations
@@ -43,6 +44,33 @@ FuncDecl: Statement = {
 //return statement
 Return: Statement = {
     "return" <value:Expression?> => Statement::Return { value }
+};
+
+//assignment statements
+//health = 100
+//player.health += 50
+Assignment: Statement = {
+    <target:AssignTarget> <op:AssignOp> <value:Expression> => {
+        Statement::Assignment { target, op, value }
+    }
+};
+
+//things that can be assigned to - variables or member access
+AssignTarget: Expression = {
+    <name:Ident> => Expression::Variable(name),
+    <obj:AssignTarget> "." <member:Ident> => Expression::MemberAccess {
+        object: Box::new(obj),
+        member,
+    },
+};
+
+//assignment operators
+AssignOp: AssignmentOp = {
+    "=" => AssignmentOp::Assign,
+    "+=" => AssignmentOp::AddAssign,
+    "-=" => AssignmentOp::SubAssign,
+    "*=" => AssignmentOp::MulAssign,
+    "/=" => AssignmentOp::DivAssign,
 };
 
 //single parameter definition
