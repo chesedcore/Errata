@@ -18,7 +18,6 @@ pub Statement: Statement = {
 //variable declarations
 //var x = 3
 //var x: int = 3
-//var name: String = "bob"
 VarDecl: Statement = {
     "var" <name:Ident> <type_annotation:(":" <Ident>)?> "=" <value:Expression> => {
         let is_private = name.starts_with('_');
@@ -27,9 +26,6 @@ VarDecl: Statement = {
 };
 
 //function declarations with return types
-//func foo() { }
-//func add(a: int, b: int) -> int { }
-//mut func increment() -> int { }
 FuncDecl: Statement = {
     <is_mut:"mut"?> "func" <name:Ident> "(" <params:Comma<Param>> ")" <return_type:("->" <Ident>)?> "{" <body:Statement*> "}" => {
         let is_private = name.starts_with('_');
@@ -45,15 +41,11 @@ FuncDecl: Statement = {
 };
 
 //return statement
-//return
-//return x + 1
 Return: Statement = {
     "return" <value:Expression?> => Statement::Return { value }
 };
 
 //single parameter definition
-//x: int
-//mut player: Player
 Param: Parameter = {
     <is_mut:"mut"?> <name:Ident> ":" <type_annotation:Ident> => {
         Parameter {
@@ -75,105 +67,92 @@ Comma<T>: Vec<T> = {
     }
 };
 
-//expressions with operator precedence
-//lowest precedence (evaluated last)
+//expressions, complex exprs
 pub Expression: Expression = {
-    LogicalOrExpr,
-};
-
-LogicalOrExpr: Expression = {
-    <left:LogicalOrExpr> "||" <right:LogicalAndExpr> => Expression::BinaryOp {
-        left: Box::new(left),
-        op: BinaryOperator::Or,
-        right: Box::new(right),
+    #[precedence(level="0")]
+    <n:Num> => Expression::IntLiteral(n),
+    <s:Str> => Expression::StringLiteral(s),
+    <name:Ident> => Expression::Variable(name),
+    "(" <Expression> ")",
+    
+    #[precedence(level="1")]
+    <name:Ident> "(" <args:Comma<Expression>> ")" => Expression::FunctionCall { name, args },
+    
+    #[precedence(level="2")] #[assoc(side="left")]
+    <obj:Expression> "." <member:Ident> => Expression::MemberAccess {
+        object: Box::new(obj),
+        member,
     },
-    LogicalAndExpr,
-};
-
-LogicalAndExpr: Expression = {
-    <left:LogicalAndExpr> "&&" <right:ComparisonExpr> => Expression::BinaryOp {
-        left: Box::new(left),
-        op: BinaryOperator::And,
-        right: Box::new(right),
-    },
-    ComparisonExpr,
-};
-
-ComparisonExpr: Expression = {
-    <left:ComparisonExpr> "==" <right:AddSubExpr> => Expression::BinaryOp {
-        left: Box::new(left),
-        op: BinaryOperator::Equals,
-        right: Box::new(right),
-    },
-    <left:ComparisonExpr> "!=" <right:AddSubExpr> => Expression::BinaryOp {
-        left: Box::new(left),
-        op: BinaryOperator::NotEquals,
-        right: Box::new(right),
-    },
-    <left:ComparisonExpr> "<" <right:AddSubExpr> => Expression::BinaryOp {
-        left: Box::new(left),
-        op: BinaryOperator::Less,
-        right: Box::new(right),
-    },
-    <left:ComparisonExpr> "<=" <right:AddSubExpr> => Expression::BinaryOp {
-        left: Box::new(left),
-        op: BinaryOperator::LessEqual,
-        right: Box::new(right),
-    },
-    <left:ComparisonExpr> ">" <right:AddSubExpr> => Expression::BinaryOp {
-        left: Box::new(left),
-        op: BinaryOperator::Greater,
-        right: Box::new(right),
-    },
-    <left:ComparisonExpr> ">=" <right:AddSubExpr> => Expression::BinaryOp {
-        left: Box::new(left),
-        op: BinaryOperator::GreaterEqual,
-        right: Box::new(right),
-    },
-    AddSubExpr,
-};
-
-AddSubExpr: Expression = {
-    <left:AddSubExpr> "+" <right:MulDivExpr> => Expression::BinaryOp {
-        left: Box::new(left),
-        op: BinaryOperator::Add,
-        right: Box::new(right),
-    },
-    <left:AddSubExpr> "-" <right:MulDivExpr> => Expression::BinaryOp {
-        left: Box::new(left),
-        op: BinaryOperator::Subtract,
-        right: Box::new(right),
-    },
-    MulDivExpr,
-};
-
-MulDivExpr: Expression = {
-    <left:MulDivExpr> "*" <right:PrimaryExpr> => Expression::BinaryOp {
+    
+    #[precedence(level="3")] #[assoc(side="left")]
+    <left:Expression> "*" <right:Expression> => Expression::BinaryOp {
         left: Box::new(left),
         op: BinaryOperator::Multiply,
         right: Box::new(right),
     },
-    <left:MulDivExpr> "/" <right:PrimaryExpr> => Expression::BinaryOp {
+    <left:Expression> "/" <right:Expression> => Expression::BinaryOp {
         left: Box::new(left),
         op: BinaryOperator::Divide,
         right: Box::new(right),
     },
-    PrimaryExpr,
-};
-
-PrimaryExpr: Expression = {
-    //literals
-    <n:Num> => Expression::IntLiteral(n),
-    <s:Str> => Expression::StringLiteral(s),
     
-    //function call: foo(a, b, c)
-    <name:Ident> "(" <args:Comma<Expression>> ")" => Expression::FunctionCall { name, args },
+    #[precedence(level="4")] #[assoc(side="left")]
+    <left:Expression> "+" <right:Expression> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::Add,
+        right: Box::new(right),
+    },
+    <left:Expression> "-" <right:Expression> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::Subtract,
+        right: Box::new(right),
+    },
     
-    //variable reference
-    <name:Ident> => Expression::Variable(name),
+    #[precedence(level="5")] #[assoc(side="left")]
+    <left:Expression> "==" <right:Expression> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::Equals,
+        right: Box::new(right),
+    },
+    <left:Expression> "!=" <right:Expression> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::NotEquals,
+        right: Box::new(right),
+    },
+    <left:Expression> "<" <right:Expression> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::Less,
+        right: Box::new(right),
+    },
+    <left:Expression> "<=" <right:Expression> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::LessEqual,
+        right: Box::new(right),
+    },
+    <left:Expression> ">" <right:Expression> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::Greater,
+        right: Box::new(right),
+    },
+    <left:Expression> ">=" <right:Expression> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::GreaterEqual,
+        right: Box::new(right),
+    },
     
-    //parenthesised expression for grouping
-    "(" <Expression> ")",
+    #[precedence(level="6")] #[assoc(side="left")]
+    <left:Expression> "&&" <right:Expression> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::And,
+        right: Box::new(right),
+    },
+    
+    #[precedence(level="7")] #[assoc(side="left")]
+    <left:Expression> "||" <right:Expression> => Expression::BinaryOp {
+        left: Box::new(left),
+        op: BinaryOperator::Or,
+        right: Box::new(right),
+    },
 };
 
 //lexer tokens

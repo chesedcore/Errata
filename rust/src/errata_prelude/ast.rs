@@ -20,6 +20,12 @@ pub enum Statement {
     Return {
         value: Option<Expression>,
     },
+
+    Assignment {
+        target: Expression,
+        op: AssignmentOp,
+        value: Expression,
+    },
 }
 
 //function parameters
@@ -39,6 +45,12 @@ pub enum Expression {
     
     //variable reference
     Variable(String),
+    
+    //player.health, weapon.damage, etc
+    MemberAccess {
+        object: Box<Expression>,
+        member: String,
+    },
     
     //binary operations, a + b, x * y, health > 0
     BinaryOp {
@@ -73,4 +85,14 @@ pub enum BinaryOperator {
     //logical
     And, // &&
     Or,  // ||
+}
+
+//assignment operators
+#[derive(Debug, Clone)]
+pub enum AssignmentOp {
+    Assign,      // =
+    AddAssign,   // +=
+    SubAssign,   // -=
+    MulAssign,   // *=
+    DivAssign,   // /=
 }
